@@ -8,4 +8,4 @@ Run `npm start`; `PORT` defaults to 3000. No external services or persistent dat
 
 `GET /api/stream?route=river&after=0` emits a connection comment, then named `checkpoint` events every 350ms, each with a numeric ID and JSON data, followed by a named `complete` event and EOF. `Last-Event-ID` overrides the `after` query. Cursors must be integers from zero through the release's checkpoint count. Resume only returns checkpoints after that ID. Streams are finite and disconnects clear their timer. There is no retry or infinite producer loop.
 
-Release 1 has three checkpoints. UI pause closes EventSource and resume sends its last checkpoint; a completed journey can be replayed. This is a demonstration of delivery status, not an operational courier service.
+Release 2 adds the fourth Delivered checkpoint. Release 1 remains reproducible at its pinned commit. UI pause closes EventSource and resume sends its last checkpoint; a completed journey can be replayed. This is a demonstration of delivery status, not an operational courier service.
