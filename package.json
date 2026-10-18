@@ -1,0 +1,8 @@
+{
+  "name": "void-ship-trackline-1018",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"start": "node server.js"},
+  "description": "Synthetic delivery tracker with bounded server-sent events"
+}
