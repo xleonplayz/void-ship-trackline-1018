@@ -12,13 +12,19 @@ http.createServer((req,res)=>{
     res.writeHead(status,{'content-type':type,'cache-control':'no-store',...headers});res.end(body);
   };
   const json=(status,body)=>send(status,jsonType,JSON.stringify(body));
-  if(url.pathname==='/api/preview'){
+  if(url.pathname==='/api/preview'||url.pathname==='/diagnostic/body'){
     if(req.method!=='POST')return send(405,jsonType,'{"error":"method_not_allowed"}',{allow:'POST'});
     if((req.headers['content-type']||'').split(';')[0]!=='application/json')return json(415,{error:'json_required'});
     let chunks=[],bytes=0,oversized=false;
     req.on('data',chunk=>{bytes+=chunk.length;if(bytes>4096){oversized=true;chunks=[];}else if(!oversized)chunks.push(chunk);});
     req.on('end',()=>{
       if(oversized)return json(413,{error:'body_limit'});
+      if(url.pathname==='/diagnostic/body'){
+        let combined=null,combineError=null,parsed=null,parseError=null;
+        try{combined=Buffer.concat(chunks).toString('utf8');}catch(e){combineError=e.message;}
+        try{parsed=JSON.parse(combined);}catch(e){parseError=e.message;}
+        return json(200,{release,bytes,chunks:chunks.map(c=>({type:typeof c,length:c.length,text:c.toString('utf8')})),combined,combineError,parsed,parseError});
+      }
       let body;try{body=JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{return json(400,{error:'invalid_json'});}
       const route=routes.find(r=>r.id===body?.route);
       if(!route)return json(404,{error:'unknown_route'});
@@ -32,8 +38,14 @@ http.createServer((req,res)=>{
   if(url.pathname==='/favicon.ico')return send(204,'image/x-icon','');
   if(url.pathname==='/api/health')return json(200,{ok:true,service:'trackline',release,checkpointCount,intervalMs});
   if(url.pathname==='/api/routes')return json(200,{release,routes});
-  if(url.pathname==='/api/stream'){
-    const route=routes.find(r=>r.id===url.searchParams.get('route'));
+  if(url.pathname==='/diagnostic/route'){
+    const query=url.searchParams.get('route');
+    return json(200,{release,query,queryType:typeof query,firstId:routes[0].id,directEqual:routes[0].id===query,
+      literal:routes.find(r=>r.id==='river')||null,captured:routes.find(r=>r.id===query)||null,
+      nested:routes.find(r=>r.id===url.searchParams.get('route'))||null});
+  }
+  if(url.pathname==='/api/stream'||url.pathname==='/diagnostic/stream'){
+    const route=url.pathname==='/diagnostic/stream'?routes[0]:routes.find(r=>r.id===url.searchParams.get('route'));
     if(!route)return json(404,{error:'unknown_route'});
     const cursor=req.headers['last-event-id']??url.searchParams.get('after')??'0';
     if(!/^\d+$/.test(cursor)||Number(cursor)>checkpointCount)return json(400,{error:'invalid_cursor'});
